@@ -1,1 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Nave</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: black;
+        }
 
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .game-over {
+            color: white;
+            font-size: 40px;
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<div id="gameOver" class="game-over" style="display:none;">Game Over!</div>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Nave
+    const ship = {
+        x: canvas.width / 2,
+        y: canvas.height - 50,
+        width: 50,
+        height: 50,
+        speed: 5,
+        dx: 0,
+        draw: function() {
+            ctx.fillStyle = "white";
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        },
+        move: function() {
+            this.x += this.dx;
+            if (this.x < 0) this.x = 0;
+            if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+        }
+    };
+
+    // Projéteis
+    const bullets = [];
+    const bulletSpeed = 5;
+
+    function createBullet() {
+        const bullet = {
+            x: ship.x + ship.width / 2 - 5,
+            y: ship.y,
+            width: 10,
+            height: 20,
+            speed: bulletSpeed,
+            draw: function() {
+                ctx.fillStyle = "red";
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            },
+            move: function() {
+                this.y -= this.speed;
+            }
+        };
+        bullets.push(bullet);
+    }
+
+    // Movimentação com o teclado
+    let rightPressed = false;
+    let leftPressed = false;
+    let spacePressed = false;
+
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "ArrowRight") rightPressed = true;
+        if (e.key === "ArrowLeft") leftPressed = true;
+        if (e.key === " ") spacePressed = true;
+    });
+
+    document.addEventListener("keyup", function(e) {
+        if (e.key === "ArrowRight") rightPressed = false;
+        if (e.key === "ArrowLeft") leftPressed = false;
+        if (e.key === " ") spacePressed = false;
+    });
+
+    // Função principal do jogo
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Movimenta a nave
+        if (rightPressed) ship.dx = ship.speed;
+        else if (leftPressed) ship.dx = -ship.speed;
+        else ship.dx = 0;
+
+        ship.move();
+        ship.draw();
+
+        // Criar e mover projéteis
+        if (spacePressed) createBullet();
+        bullets.forEach((bullet, index) => {
+            bullet.move();
+            bullet.draw();
+            // Remover projéteis que saem da tela
+            if (bullet.y < 0) {
+                bullets.splice(index, 1);
+            }
+        });
+
+        // Verificar se a nave tocou o topo
+        if (ship.y <= 0) {
+            gameOver();
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Fim de Jogo
+    function gameOver() {
+        document.getElementById("gameOver").style.display = "block";
+        cancelAnimationFrame(gameLoop);
+    }
+
+    // Iniciar o jogo
+    gameLoop();
+</script>
+
+</body>
+</html>
