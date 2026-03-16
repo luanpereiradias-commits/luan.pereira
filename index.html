@@ -27,11 +27,20 @@
             font-size: 48px;
             font-weight: bold;
         }
+
+        .score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 24px;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
     <div id="gameOver" class="game-over" style="display: none;">Game Over!</div>
+    <div id="score" class="score">Pontuação: 0</div>
 
     <script>
         // Definir o tamanho do canvas
@@ -50,6 +59,7 @@
         let laserSpeed = 7;
         let lasers = [];
         let enemies = [];
+        let score = 0; // Pontuação
         let gameOver = false;
 
         // Controle do movimento do foguete
@@ -135,6 +145,12 @@
                         // Remover laser e inimigo quando há colisão
                         lasers.splice(laserIndex, 1);
                         enemies.splice(enemyIndex, 1);
+
+                        // Aumentar a pontuação
+                        score += 10;
+
+                        // Atualizar a exibição da pontuação
+                        document.getElementById("score").textContent = `Pontuação: ${score}`;
                     }
                 });
             });
@@ -159,7 +175,7 @@
             spawnEnemies();
         }
 
-        // Função para verificar colisões (apenas um exemplo básico)
+        // Função para verificar colisões com o foguete (game over)
         function checkGameOver() {
             // Verifica se algum inimigo colidiu com o foguete
             enemies.forEach((enemy) => {
