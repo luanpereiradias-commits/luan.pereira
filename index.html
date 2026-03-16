@@ -3,166 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo de Foguete</title>
+    <title>Jogo de Foguete e Laser</title>
     <style>
-        body, html {
+        body {
             margin: 0;
             padding: 0;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             background-color: black;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
         }
 
         canvas {
-            border: 2px solid white;
+            display: block;
+            margin: 0 auto;
         }
 
         .game-over {
             position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             color: white;
-            font-size: 50px;
-            font-family: Arial, sans-serif;
-            text-align: center;
+            font-size: 48px;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <div class="game-over" id="gameOverText" style="display: none;">Game Over</div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOver" class="game-over" style="display: none;">Game Over!</div>
 
     <script>
+        // Definir o tamanho do canvas
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        const rocket = {
-            x: canvas.width / 2,
-            y: canvas.height - 60,
-            width: 40,
-            height: 60,
-            speed: 5
-        };
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-        const lasers = [];
-        const enemies = [];
+        // Variáveis do jogo
+        let rocketX = canvas.width / 2 - 25;
+        let rocketY = canvas.height - 100;
+        let rocketWidth = 50;
+        let rocketHeight = 50;
+        let rocketSpeed = 5;
+        let laserSpeed = 7;
+        let lasers = [];
         let gameOver = false;
+
+        // Controle do movimento do foguete
+        let moveLeft = false;
+        let moveRight = false;
+
+        // Adicionar controle de teclas
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft") moveLeft = true;
+            if (e.key === "ArrowRight") moveRight = true;
+            if (e.key === " ") shootLaser();
+        });
+
+        window.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowLeft") moveLeft = false;
+            if (e.key === "ArrowRight") moveRight = false;
+        });
 
         // Função para desenhar o foguete
         function drawRocket() {
-            ctx.fillStyle = "red";
-            ctx.fillRect(rocket.x, rocket.y, rocket.width, rocket.height);
+            ctx.fillStyle = "white";
+            ctx.fillRect(rocketX, rocketY, rocketWidth, rocketHeight);
         }
 
-        // Função para desenhar os lasers
+        // Função para desenhar o laser
         function drawLasers() {
-            ctx.fillStyle = "cyan";
-            lasers.forEach(laser => {
-                ctx.fillRect(laser.x, laser.y, 5, 15);
-            });
-        }
-
-        // Função para desenhar os inimigos
-        function drawEnemies() {
-            ctx.fillStyle = "green";
-            enemies.forEach(enemy => {
-                ctx.fillRect(enemy.x, enemy.y, 40, 40);
-            });
-        }
-
-        // Função para atualizar o movimento dos lasers
-        function updateLasers() {
+            ctx.fillStyle = "red";
             lasers.forEach((laser, index) => {
-                laser.y -= 5; // Lasers se movem para cima
+                ctx.fillRect(laser.x, laser.y, 5, 20);
+                laser.y -= laserSpeed;
+
+                // Remover lasers que saem da tela
                 if (laser.y < 0) {
-                    lasers.splice(index, 1); // Remover lasers fora da tela
+                    lasers.splice(index, 1);
                 }
             });
-        }
-
-        // Função para atualizar os inimigos
-        function updateEnemies() {
-            enemies.forEach(enemy => {
-                enemy.y += enemy.speed;
-                if (enemy.y > canvas.height) {
-                    enemy.y = -40;
-                    enemy.x = Math.random() * (canvas.width - 40);
-                }
-            });
-        }
-
-        // Função para detectar colisões
-        function checkCollisions() {
-            lasers.forEach((laser, laserIndex) => {
-                enemies.forEach((enemy, enemyIndex) => {
-                    if (laser.x < enemy.x + 40 && laser.x + 5 > enemy.x &&
-                        laser.y < enemy.y + 40 && laser.y + 15 > enemy.y) {
-                        lasers.splice(laserIndex, 1);
-                        enemies.splice(enemyIndex, 1);
-                    }
-                });
-            });
-        }
-
-        // Função para criar inimigos
-        function createEnemies() {
-            if (Math.random() < 0.02) {
-                const x = Math.random() * (canvas.width - 40);
-                const y = -40;
-                const speed = 2 + Math.random() * 2;
-                enemies.push({ x, y, speed });
-            }
-        }
-
-        // Função para desenhar o jogo
-        function drawGame() {
-            if (gameOver) {
-                document.getElementById("gameOverText").style.display = "block";
-                return;
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawRocket();
-            drawLasers();
-            drawEnemies();
-
-            updateLasers();
-            updateEnemies();
-            checkCollisions();
-            createEnemies();
-
-            requestAnimationFrame(drawGame); // Atualizar o jogo a cada frame
-        }
-
-        // Função para mover o foguete
-        function moveRocket(event) {
-            if (event.key === "ArrowLeft" && rocket.x > 0) {
-                rocket.x -= rocket.speed;
-            } else if (event.key === "ArrowRight" && rocket.x < canvas.width - rocket.width) {
-                rocket.x += rocket.speed;
-            } else if (event.key === "ArrowUp" && rocket.y > 0) {
-                rocket.y -= rocket.speed;
-            } else if (event.key === "ArrowDown" && rocket.y < canvas.height - rocket.height) {
-                rocket.y += rocket.speed;
-            }
         }
 
         // Função para atirar laser
         function shootLaser() {
+            if (!gameOver) {
+                lasers.push({
+                    x: rocketX + rocketWidth / 2 - 2.5,
+                    y: rocketY,
+                });
+            }
+        }
+
+        // Função para atualizar o movimento do foguete
+        function updateRocket() {
+            if (moveLeft && rocketX > 0) rocketX -= rocketSpeed;
+            if (moveRight && rocketX < canvas.width - rocketWidth) rocketX += rocketSpeed;
+        }
+
+        // Função para desenhar tudo no canvas
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             if (gameOver) return;
-            lasers.push({ x: rocket.x + rocket.width / 2 - 2.5, y: rocket.y });
+
+            drawRocket();
+            drawLasers();
+            updateRocket();
         }
 
-        // Função para iniciar o jogo
-        function startGame() {
-            window.addEventListener("keydown", moveRocket);
-            window.addEventListener("keydown", (e) => {
-                if (e.key === " " || e.key === "Enter") shootLaser(); // Tiro com espaço ou Enter
-            });
-            drawGame();
+        // Função para verificar colisões (apenas um exemplo básico, você pode expandir)
+        function checkCollisions() {
+            // Exemplo de uma colisão simples (usando a borda inferior da tela como "inimigo")
+            if (rocketY + rocketHeight > canvas.height) {
+                gameOver = true;
+                document.getElementById("gameOver").style.display = "block";
+            }
         }
 
-        startGame();
+        // Função para atualizar o jogo a cada frame
+        function update() {
+            if (gameOver) return;
+
+            draw();
+            checkCollisions();
+            requestAnimationFrame(update);
+        }
+
+        // Iniciar o jogo
+        update();
     </script>
 </body>
 </html>
