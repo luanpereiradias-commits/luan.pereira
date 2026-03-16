@@ -1,1 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Foguete</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
 
+        canvas {
+            border: 2px solid white;
+        }
+
+        #gameCanvas {
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const rocket = {
+        x: 400,
+        y: 500,
+        width: 50,
+        height: 80,
+        speed: 5,
+        dx: 0,
+    };
+
+    const lasers = [];
+    const enemies = [];
+    let enemySpeed = 2;
+
+    function drawRocket() {
+        ctx.fillStyle = "white";
+        ctx.fillRect(rocket.x, rocket.y, rocket.width, rocket.height);
+    }
+
+    function moveRocket() {
+        rocket.x += rocket.dx;
+
+        if (rocket.x < 0) rocket.x = 0;
+        if (rocket.x + rocket.width > canvas.width) rocket.x = canvas.width - rocket.width;
+    }
+
+    function drawLasers() {
+        lasers.forEach((laser, index) => {
+            laser.y -= laser.speed;
+            ctx.fillStyle = "red";
+            ctx.fillRect(laser.x, laser.y, laser.width, laser.height);
+
+            if (laser.y < 0) {
+                lasers.splice(index, 1); // Remove laser quando sair da tela
+            }
+        });
+    }
+
+    function drawEnemies() {
+        if (Math.random() < 0.02) {
+            const enemy = {
+                x: Math.random() * canvas.width,
+                y: 0,
+                width: 50,
+                height: 50,
+                speed: enemySpeed,
+            };
+            enemies.push(enemy);
+        }
+
+        enemies.forEach((enemy, index) => {
+            enemy.y += enemy.speed;
+            ctx.fillStyle = "blue";
+            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+
+            // Verifica colisão com laser
+            lasers.forEach((laser, laserIndex) => {
+                if (
+                    laser.x < enemy.x + enemy.width &&
+                    laser.x + laser.width > enemy.x &&
+                    laser.y < enemy.y + enemy.height &&
+                    laser.y + laser.height > enemy.y
+                ) {
+                    lasers.splice(laserIndex, 1); // Remove o laser
+                    enemies.splice(index, 1); // Remove o inimigo
+                }
+            });
+
+            // Verifica se o inimigo saiu da tela
+            if (enemy.y > canvas.height) {
+                enemies.splice(index, 1);
+            }
+        });
+    }
+
+    function moveEnemies() {
+        drawEnemies();
+    }
+
+    function shootLaser() {
+        const laser = {
+            x: rocket.x + rocket.width / 2 - 5,
+            y: rocket.y,
+            width: 10,
+            height: 20,
+            speed: 5,
+        };
+        lasers.push(laser);
+    }
+
+    function update() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        moveRocket();
+        drawRocket();
+        drawLasers();
+        moveEnemies();
+        requestAnimationFrame(update);
+    }
+
+    function keyDownHandler(e) {
+        if (e.key == "ArrowLeft") {
+            rocket.dx = -rocket.speed;
+        }
+        if (e.key == "ArrowRight") {
+            rocket.dx = rocket.speed;
+        }
+        if (e.key == " ") {
+            shootLaser();
+        }
+    }
+
+    function keyUpHandler(e) {
+        if (e.key == "ArrowLeft" || e.key == "ArrowRight") {
+            rocket.dx = 0;
+        }
+    }
+
+    document.addEventListener("keydown", keyDownHandler);
+    document.addEventListener("keyup", keyUpHandler);
+
+    update(); // Inicia o jogo
+
+</script>
+
+</body>
+</html>
