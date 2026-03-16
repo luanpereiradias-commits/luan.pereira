@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo de Foguete Realista</title>
+    <title>Jogo de Foguete</title>
     <style>
         body, html {
             margin: 0;
@@ -26,31 +26,9 @@
             font-family: Arial, sans-serif;
             text-align: center;
         }
-
-        /* Efeito de background */
-        #background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('https://i.imgur.com/8Nm5z4s.jpg');
-            background-size: cover;
-            animation: moveBackground 1.5s linear infinite;
-        }
-
-        @keyframes moveBackground {
-            from {
-                transform: translateY(0);
-            }
-            to {
-                transform: translateY(-100%);
-            }
-        }
     </style>
 </head>
 <body>
-    <div id="background"></div>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
     <div class="game-over" id="gameOverText" style="display: none;">Game Over</div>
 
@@ -58,56 +36,47 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // Sons
-        const laserSound = new Audio('https://www.soundjay.com/button/beep-07.wav');
-        const explosionSound = new Audio('https://www.soundjay.com/button/beep-09.wav');
-
-        // Foguete
-        const rocketImage = new Image();
-        rocketImage.src = 'https://i.imgur.com/dgXwqXZ.png';  // Imagem do foguete
         const rocket = {
             x: canvas.width / 2,
-            y: canvas.height - 100,
-            width: 50,
-            height: 100,
+            y: canvas.height - 60,
+            width: 40,
+            height: 60,
             speed: 5
         };
 
-        // Lasers
         const lasers = [];
-
-        // Inimigos
         const enemies = [];
         let gameOver = false;
 
         // Função para desenhar o foguete
         function drawRocket() {
-            ctx.drawImage(rocketImage, rocket.x, rocket.y, rocket.width, rocket.height);
+            ctx.fillStyle = "red";
+            ctx.fillRect(rocket.x, rocket.y, rocket.width, rocket.height);
         }
 
         // Função para desenhar os lasers
         function drawLasers() {
+            ctx.fillStyle = "cyan";
             lasers.forEach(laser => {
-                ctx.fillStyle = "cyan";
                 ctx.fillRect(laser.x, laser.y, 5, 15);
             });
         }
 
         // Função para desenhar os inimigos
         function drawEnemies() {
+            ctx.fillStyle = "green";
             enemies.forEach(enemy => {
-                ctx.fillStyle = "green";
-                ctx.beginPath();
-                ctx.arc(enemy.x + 20, enemy.y + 20, 20, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillRect(enemy.x, enemy.y, 40, 40);
             });
         }
 
         // Função para atualizar o movimento dos lasers
         function updateLasers() {
             lasers.forEach((laser, index) => {
-                laser.y -= 5;
-                if (laser.y < 0) lasers.splice(index, 1);
+                laser.y -= 5; // Lasers se movem para cima
+                if (laser.y < 0) {
+                    lasers.splice(index, 1); // Remover lasers fora da tela
+                }
             });
         }
 
@@ -130,7 +99,6 @@
                         laser.y < enemy.y + 40 && laser.y + 15 > enemy.y) {
                         lasers.splice(laserIndex, 1);
                         enemies.splice(enemyIndex, 1);
-                        explosionSound.play(); // Efeito sonoro de explosão
                     }
                 });
             });
@@ -183,7 +151,6 @@
         function shootLaser() {
             if (gameOver) return;
             lasers.push({ x: rocket.x + rocket.width / 2 - 2.5, y: rocket.y });
-            laserSound.play(); // Efeito sonoro de disparo
         }
 
         // Função para iniciar o jogo
