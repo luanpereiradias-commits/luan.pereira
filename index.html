@@ -43,45 +43,58 @@
     <div id="score" class="score">Pontuação: 0</div>
 
     <script>
-        // Definir o tamanho do canvas
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        // Variáveis do jogo
-        let rocketX = canvas.width / 2 - 25;
+        let rocketX = canvas.width / 2;
         let rocketY = canvas.height - 100;
         let rocketWidth = 50;
-        let rocketHeight = 50;
-        let rocketSpeed = 5;
-        let laserSpeed = 7;
+        let rocketHeight = 80;
+        let rocketSpeed = 0;
+        let rocketAccel = 0.1;  // Aceleração do foguete
+        let maxSpeed = 5;  // Velocidade máxima do foguete
+        let rotation = 0;  // Ângulo de rotação do foguete
         let lasers = [];
         let enemies = [];
-        let score = 0; // Pontuação
+        let score = 0;
         let gameOver = false;
 
-        // Controle do movimento do foguete
         let moveLeft = false;
         let moveRight = false;
+        let moveUp = false;
+
+        // Carregar imagem do foguete
+        const rocketImage = new Image();
+        rocketImage.src = 'https://example.com/rocket.png'; // Substitua com a URL de uma imagem de foguete real
+
+        // Som de disparo
+        const laserSound = new Audio('https://example.com/laser_sound.mp3'); // Substitua com o caminho para o som de laser
 
         // Adicionar controle de teclas
         window.addEventListener("keydown", (e) => {
             if (e.key === "ArrowLeft") moveLeft = true;
             if (e.key === "ArrowRight") moveRight = true;
+            if (e.key === "ArrowUp") moveUp = true;
             if (e.key === " ") shootLaser();
         });
 
         window.addEventListener("keyup", (e) => {
             if (e.key === "ArrowLeft") moveLeft = false;
             if (e.key === "ArrowRight") moveRight = false;
+            if (e.key === "ArrowUp") moveUp = false;
         });
 
         // Função para desenhar o foguete
         function drawRocket() {
-            ctx.fillStyle = "white";
-            ctx.fillRect(rocketX, rocketY, rocketWidth, rocketHeight);
+            // Aplicar a rotação do foguete
+            ctx.save();
+            ctx.translate(rocketX + rocketWidth / 2, rocketY + rocketHeight / 2); // Posição do centro
+            ctx.rotate(rotation); // Girar o foguete conforme a direção
+            ctx.drawImage(rocketImage, -rocketWidth / 2, -rocketHeight / 2, rocketWidth, rocketHeight); // Desenhar o foguete
+            ctx.restore();
         }
 
         // Função para desenhar o laser
@@ -89,9 +102,8 @@
             ctx.fillStyle = "red";
             lasers.forEach((laser, index) => {
                 ctx.fillRect(laser.x, laser.y, 5, 20);
-                laser.y -= laserSpeed;
+                laser.y -= 7;
 
-                // Remover lasers que saem da tela
                 if (laser.y < 0) {
                     lasers.splice(index, 1);
                 }
@@ -105,6 +117,7 @@
                     x: rocketX + rocketWidth / 2 - 2.5,
                     y: rocketY,
                 });
+                laserSound.play(); // Tocar som do laser
             }
         }
 
@@ -113,11 +126,8 @@
             ctx.fillStyle = "green";
             enemies.forEach((enemy, index) => {
                 ctx.fillRect(enemy.x, enemy.y, 40, 40);
-
-                // Movimento dos inimigos
                 enemy.y += 2;
 
-                // Remover inimigos que saem da tela
                 if (enemy.y > canvas.height) {
                     enemies.splice(index, 1);
                 }
@@ -136,20 +146,14 @@
         function checkCollisions() {
             lasers.forEach((laser, laserIndex) => {
                 enemies.forEach((enemy, enemyIndex) => {
-                    // Verificar colisão (simples: se o laser atinge a nave)
                     if (laser.x < enemy.x + 40 &&
                         laser.x + 5 > enemy.x &&
                         laser.y < enemy.y + 40 &&
                         laser.y + 20 > enemy.y) {
 
-                        // Remover laser e inimigo quando há colisão
                         lasers.splice(laserIndex, 1);
                         enemies.splice(enemyIndex, 1);
-
-                        // Aumentar a pontuação
                         score += 10;
-
-                        // Atualizar a exibição da pontuação
                         document.getElementById("score").textContent = `Pontuação: ${score}`;
                     }
                 });
@@ -158,8 +162,21 @@
 
         // Função para atualizar o movimento do foguete
         function updateRocket() {
-            if (moveLeft && rocketX > 0) rocketX -= rocketSpeed;
-            if (moveRight && rocketX < canvas.width - rocketWidth) rocketX += rocketSpeed;
+            if (moveLeft) rotation -= 0.05;
+            if (moveRight) rotation += 0.05;
+
+            if (moveUp && rocketSpeed < maxSpeed) {
+                rocketSpeed += rocketAccel; // Acelera o foguete
+            }
+
+            rocketX += Math.sin(rotation) * rocketSpeed;
+            rocketY -= Math.cos(rotation) * rocketSpeed;
+
+            // Impedir que o foguete saia da tela
+            if (rocketX < 0) rocketX = 0;
+            if (rocketX + rocketWidth > canvas.width) rocketX = canvas.width - rocketWidth;
+            if (rocketY < 0) rocketY = 0;
+            if (rocketY + rocketHeight > canvas.height) rocketY = canvas.height - rocketHeight;
         }
 
         // Função para desenhar tudo no canvas
@@ -177,7 +194,6 @@
 
         // Função para verificar colisões com o foguete (game over)
         function checkGameOver() {
-            // Verifica se algum inimigo colidiu com o foguete
             enemies.forEach((enemy) => {
                 if (enemy.x < rocketX + rocketWidth &&
                     enemy.x + 40 > rocketX &&
