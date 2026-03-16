@@ -3,158 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo de Foguete</title>
+    <title>Jogo de Foguete Realista</title>
     <style>
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            background-color: black;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            background-color: black;
         }
 
         canvas {
             border: 2px solid white;
         }
 
-        #gameCanvas {
-            background-color: black;
+        .game-over {
+            position: absolute;
+            color: white;
+            font-size: 50px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        /* Efeito de background */
+        #background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://i.imgur.com/8Nm5z4s.jpg');
+            background-size: cover;
+            animation: moveBackground 1.5s linear infinite;
+        }
+
+        @keyframes moveBackground {
+            from {
+                transform: translateY(0);
+            }
+            to {
+                transform: translateY(-100%);
+            }
         }
     </style>
 </head>
 <body>
+    <div id="background"></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="game-over" id="gameOverText" style="display: none;">Game Over</div>
 
-<canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
 
-<script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+        // Sons
+        const laserSound = new Audio('https://www.soundjay.com/button/beep-07.wav');
+        const explosionSound = new Audio('https://www.soundjay.com/button/beep-09.wav');
 
-    const rocket = {
-        x: 400,
-        y: 500,
-        width: 50,
-        height: 80,
-        speed: 5,
-        dx: 0,
-    };
+        // Foguete
+        const rocketImage = new Image();
+        rocketImage.src = 'https://i.imgur.com/dgXwqXZ.png';  // Imagem do foguete
+        const rocket = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            width: 50,
+            height: 100,
+            speed: 5
+        };
 
-    const lasers = [];
-    const enemies = [];
-    let enemySpeed = 2;
+        // Lasers
+        const lasers = [];
 
-    function drawRocket() {
-        ctx.fillStyle = "white";
-        ctx.fillRect(rocket.x, rocket.y, rocket.width, rocket.height);
-    }
+        // Inimigos
+        const enemies = [];
+        let gameOver = false;
 
-    function moveRocket() {
-        rocket.x += rocket.dx;
-
-        if (rocket.x < 0) rocket.x = 0;
-        if (rocket.x + rocket.width > canvas.width) rocket.x = canvas.width - rocket.width;
-    }
-
-    function drawLasers() {
-        lasers.forEach((laser, index) => {
-            laser.y -= laser.speed;
-            ctx.fillStyle = "red";
-            ctx.fillRect(laser.x, laser.y, laser.width, laser.height);
-
-            if (laser.y < 0) {
-                lasers.splice(index, 1); // Remove laser quando sair da tela
-            }
-        });
-    }
-
-    function drawEnemies() {
-        if (Math.random() < 0.02) {
-            const enemy = {
-                x: Math.random() * canvas.width,
-                y: 0,
-                width: 50,
-                height: 50,
-                speed: enemySpeed,
-            };
-            enemies.push(enemy);
+        // Função para desenhar o foguete
+        function drawRocket() {
+            ctx.drawImage(rocketImage, rocket.x, rocket.y, rocket.width, rocket.height);
         }
 
-        enemies.forEach((enemy, index) => {
-            enemy.y += enemy.speed;
-            ctx.fillStyle = "blue";
-            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        // Função para desenhar os lasers
+        function drawLasers() {
+            lasers.forEach(laser => {
+                ctx.fillStyle = "cyan";
+                ctx.fillRect(laser.x, laser.y, 5, 15);
+            });
+        }
 
-            // Verifica colisão com laser
-            lasers.forEach((laser, laserIndex) => {
-                if (
-                    laser.x < enemy.x + enemy.width &&
-                    laser.x + laser.width > enemy.x &&
-                    laser.y < enemy.y + enemy.height &&
-                    laser.y + laser.height > enemy.y
-                ) {
-                    lasers.splice(laserIndex, 1); // Remove o laser
-                    enemies.splice(index, 1); // Remove o inimigo
+        // Função para desenhar os inimigos
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.fillStyle = "green";
+                ctx.beginPath();
+                ctx.arc(enemy.x + 20, enemy.y + 20, 20, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Função para atualizar o movimento dos lasers
+        function updateLasers() {
+            lasers.forEach((laser, index) => {
+                laser.y -= 5;
+                if (laser.y < 0) lasers.splice(index, 1);
+            });
+        }
+
+        // Função para atualizar os inimigos
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                enemy.y += enemy.speed;
+                if (enemy.y > canvas.height) {
+                    enemy.y = -40;
+                    enemy.x = Math.random() * (canvas.width - 40);
                 }
             });
+        }
 
-            // Verifica se o inimigo saiu da tela
-            if (enemy.y > canvas.height) {
-                enemies.splice(index, 1);
+        // Função para detectar colisões
+        function checkCollisions() {
+            lasers.forEach((laser, laserIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    if (laser.x < enemy.x + 40 && laser.x + 5 > enemy.x &&
+                        laser.y < enemy.y + 40 && laser.y + 15 > enemy.y) {
+                        lasers.splice(laserIndex, 1);
+                        enemies.splice(enemyIndex, 1);
+                        explosionSound.play(); // Efeito sonoro de explosão
+                    }
+                });
+            });
+        }
+
+        // Função para criar inimigos
+        function createEnemies() {
+            if (Math.random() < 0.02) {
+                const x = Math.random() * (canvas.width - 40);
+                const y = -40;
+                const speed = 2 + Math.random() * 2;
+                enemies.push({ x, y, speed });
             }
-        });
-    }
-
-    function moveEnemies() {
-        drawEnemies();
-    }
-
-    function shootLaser() {
-        const laser = {
-            x: rocket.x + rocket.width / 2 - 5,
-            y: rocket.y,
-            width: 10,
-            height: 20,
-            speed: 5,
-        };
-        lasers.push(laser);
-    }
-
-    function update() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        moveRocket();
-        drawRocket();
-        drawLasers();
-        moveEnemies();
-        requestAnimationFrame(update);
-    }
-
-    function keyDownHandler(e) {
-        if (e.key == "ArrowLeft") {
-            rocket.dx = -rocket.speed;
         }
-        if (e.key == "ArrowRight") {
-            rocket.dx = rocket.speed;
+
+        // Função para desenhar o jogo
+        function drawGame() {
+            if (gameOver) {
+                document.getElementById("gameOverText").style.display = "block";
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawRocket();
+            drawLasers();
+            drawEnemies();
+
+            updateLasers();
+            updateEnemies();
+            checkCollisions();
+            createEnemies();
+
+            requestAnimationFrame(drawGame); // Atualizar o jogo a cada frame
         }
-        if (e.key == " ") {
-            shootLaser();
+
+        // Função para mover o foguete
+        function moveRocket(event) {
+            if (event.key === "ArrowLeft" && rocket.x > 0) {
+                rocket.x -= rocket.speed;
+            } else if (event.key === "ArrowRight" && rocket.x < canvas.width - rocket.width) {
+                rocket.x += rocket.speed;
+            } else if (event.key === "ArrowUp" && rocket.y > 0) {
+                rocket.y -= rocket.speed;
+            } else if (event.key === "ArrowDown" && rocket.y < canvas.height - rocket.height) {
+                rocket.y += rocket.speed;
+            }
         }
-    }
 
-    function keyUpHandler(e) {
-        if (e.key == "ArrowLeft" || e.key == "ArrowRight") {
-            rocket.dx = 0;
+        // Função para atirar laser
+        function shootLaser() {
+            if (gameOver) return;
+            lasers.push({ x: rocket.x + rocket.width / 2 - 2.5, y: rocket.y });
+            laserSound.play(); // Efeito sonoro de disparo
         }
-    }
 
-    document.addEventListener("keydown", keyDownHandler);
-    document.addEventListener("keyup", keyUpHandler);
+        // Função para iniciar o jogo
+        function startGame() {
+            window.addEventListener("keydown", moveRocket);
+            window.addEventListener("keydown", (e) => {
+                if (e.key === " " || e.key === "Enter") shootLaser(); // Tiro com espaço ou Enter
+            });
+            drawGame();
+        }
 
-    update(); // Inicia o jogo
-
-</script>
-
+        startGame();
+    </script>
 </body>
 </html>
