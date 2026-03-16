@@ -49,6 +49,7 @@
         let rocketSpeed = 5;
         let laserSpeed = 7;
         let lasers = [];
+        let enemies = [];
         let gameOver = false;
 
         // Controle do movimento do foguete
@@ -97,6 +98,48 @@
             }
         }
 
+        // Função para desenhar inimigos
+        function drawEnemies() {
+            ctx.fillStyle = "green";
+            enemies.forEach((enemy, index) => {
+                ctx.fillRect(enemy.x, enemy.y, 40, 40);
+
+                // Movimento dos inimigos
+                enemy.y += 2;
+
+                // Remover inimigos que saem da tela
+                if (enemy.y > canvas.height) {
+                    enemies.splice(index, 1);
+                }
+            });
+        }
+
+        // Função para gerar inimigos aleatoriamente
+        function spawnEnemies() {
+            if (Math.random() < 0.02) {
+                let x = Math.random() * (canvas.width - 40);
+                enemies.push({ x, y: -40 });
+            }
+        }
+
+        // Função para verificar colisões entre lasers e inimigos
+        function checkCollisions() {
+            lasers.forEach((laser, laserIndex) => {
+                enemies.forEach((enemy, enemyIndex) => {
+                    // Verificar colisão (simples: se o laser atinge a nave)
+                    if (laser.x < enemy.x + 40 &&
+                        laser.x + 5 > enemy.x &&
+                        laser.y < enemy.y + 40 &&
+                        laser.y + 20 > enemy.y) {
+
+                        // Remover laser e inimigo quando há colisão
+                        lasers.splice(laserIndex, 1);
+                        enemies.splice(enemyIndex, 1);
+                    }
+                });
+            });
+        }
+
         // Função para atualizar o movimento do foguete
         function updateRocket() {
             if (moveLeft && rocketX > 0) rocketX -= rocketSpeed;
@@ -111,16 +154,23 @@
 
             drawRocket();
             drawLasers();
+            drawEnemies();
             updateRocket();
+            spawnEnemies();
         }
 
-        // Função para verificar colisões (apenas um exemplo básico, você pode expandir)
-        function checkCollisions() {
-            // Exemplo de uma colisão simples (usando a borda inferior da tela como "inimigo")
-            if (rocketY + rocketHeight > canvas.height) {
-                gameOver = true;
-                document.getElementById("gameOver").style.display = "block";
-            }
+        // Função para verificar colisões (apenas um exemplo básico)
+        function checkGameOver() {
+            // Verifica se algum inimigo colidiu com o foguete
+            enemies.forEach((enemy) => {
+                if (enemy.x < rocketX + rocketWidth &&
+                    enemy.x + 40 > rocketX &&
+                    enemy.y < rocketY + rocketHeight &&
+                    enemy.y + 40 > rocketY) {
+                    gameOver = true;
+                    document.getElementById("gameOver").style.display = "block";
+                }
+            });
         }
 
         // Função para atualizar o jogo a cada frame
@@ -129,6 +179,7 @@
 
             draw();
             checkCollisions();
+            checkGameOver();
             requestAnimationFrame(update);
         }
 
