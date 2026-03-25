@@ -1,206 +1,274 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo de Foguete e Laser</title>
+    <title>Space Shooter Pro</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: black;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
+        body { margin: 0; background: #0a0a0a; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 20px; left: 20px; color: #00ffcc;
+            font-size: 20px; pointer-events: none; text-transform: uppercase; letter-spacing: 2px;
         }
-
-        canvas {
-            display: block;
-            margin: 0 auto;
+        #gameOver {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; text-align: center; display: none;
+            background: rgba(0, 0, 0, 0.9); padding: 40px; border: 2px solid #00ffcc;
+            box-shadow: 0 0 20px #00ffcc; border-radius: 8px;
         }
-
-        .game-over {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 48px;
-            font-weight: bold;
+        button {
+            margin-top: 20px; padding: 12px 30px; cursor: pointer;
+            background: #00ffcc; border: none; font-weight: bold; color: #000;
+            transition: 0.3s; text-transform: uppercase;
         }
-
-        .score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-size: 24px;
-        }
+        button:hover { background: #fff; transform: scale(1.1); }
     </style>
 </head>
 <body>
+
+    <div id="ui">
+        Score: <span id="scoreVal">0</span><br>
+        Vidas: <span id="livesVal">3</span>
+    </div>
+
+    <div id="gameOver">
+        <h1>MISSSÃO FALHOU</h1>
+        <p>Pontuação Total: <span id="finalScore">0</span></p>
+        <button onclick="resetGame()">Reiniciar Sistema</button>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
-    <div id="gameOver" class="game-over" style="display: none;">Game Over!</div>
-    <div id="score" class="score">Pontuação: 0</div>
 
     <script>
-        // Definir o tamanho do canvas
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const scoreEl = document.getElementById("scoreVal");
+        const livesEl = document.getElementById("livesVal");
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        let score, lives, gameActive, enemies, lasers, particles, player;
+        const keys = {};
 
-        // Variáveis do jogo
-        let rocketX = canvas.width / 2 - 25;
-        let rocketY = canvas.height - 100;
-        let rocketWidth = 50;
-        let rocketHeight = 50;
-        let rocketSpeed = 5;
-        let laserSpeed = 7;
-        let lasers = [];
-        let enemies = [];
-        let score = 0; // Pontuação
-        let gameOver = false;
+        // --- Classes do Jogo ---
 
-        // Controle do movimento do foguete
-        let moveLeft = false;
-        let moveRight = false;
-
-        // Adicionar controle de teclas
-        window.addEventListener("keydown", (e) => {
-            if (e.key === "ArrowLeft") moveLeft = true;
-            if (e.key === "ArrowRight") moveRight = true;
-            if (e.key === " ") shootLaser();
-        });
-
-        window.addEventListener("keyup", (e) => {
-            if (e.key === "ArrowLeft") moveLeft = false;
-            if (e.key === "ArrowRight") moveRight = false;
-        });
-
-        // Função para desenhar o foguete
-        function drawRocket() {
-            ctx.fillStyle = "white";
-            ctx.fillRect(rocketX, rocketY, rocketWidth, rocketHeight);
-        }
-
-        // Função para desenhar o laser
-        function drawLasers() {
-            ctx.fillStyle = "red";
-            lasers.forEach((laser, index) => {
-                ctx.fillRect(laser.x, laser.y, 5, 20);
-                laser.y -= laserSpeed;
-
-                // Remover lasers que saem da tela
-                if (laser.y < 0) {
-                    lasers.splice(index, 1);
-                }
-            });
-        }
-
-        // Função para atirar laser
-        function shootLaser() {
-            if (!gameOver) {
-                lasers.push({
-                    x: rocketX + rocketWidth / 2 - 2.5,
-                    y: rocketY,
-                });
+        class Player {
+            constructor() {
+                this.w = 50;
+                this.h = 50;
+                this.x = canvas.width / 2 - this.w / 2;
+                this.y = canvas.height - 80;
+                this.speed = 10;
+            }
+            draw() {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = "#00ffcc";
+                ctx.fillStyle = "#00ffcc";
+                // Desenha uma nave triangular estilizada
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.w / 2, this.y);
+                ctx.lineTo(this.x, this.y + this.h);
+                ctx.lineTo(this.x + this.w, this.y + this.h);
+                ctx.closePath();
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+            update() {
+                if (keys["ArrowLeft"] && this.x > 0) this.x -= this.speed;
+                if (keys["ArrowRight"] && this.x < canvas.width - this.w) this.x += this.speed;
             }
         }
 
-        // Função para desenhar inimigos
-        function drawEnemies() {
-            ctx.fillStyle = "green";
-            enemies.forEach((enemy, index) => {
-                ctx.fillRect(enemy.x, enemy.y, 40, 40);
-
-                // Movimento dos inimigos
-                enemy.y += 2;
-
-                // Remover inimigos que saem da tela
-                if (enemy.y > canvas.height) {
-                    enemies.splice(index, 1);
-                }
-            });
+        class Laser {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.w = 4;
+                this.h = 15;
+                this.speed = 12;
+            }
+            draw() {
+                ctx.fillStyle = "#ff0055";
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+            }
+            update() { this.y -= this.speed; }
         }
 
-        // Função para gerar inimigos aleatoriamente
-        function spawnEnemies() {
-            if (Math.random() < 0.02) {
-                let x = Math.random() * (canvas.width - 40);
-                enemies.push({ x, y: -40 });
+        class Enemy {
+            constructor() {
+                this.w = 40;
+                this.h = 40;
+                this.x = Math.random() * (canvas.width - this.w);
+                this.y = -this.h;
+                this.speed = 2 + (score / 200); // Dificuldade progressiva
+            }
+            draw() {
+                ctx.fillStyle = "#ffcc00";
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                // Detalhe "olho" do inimigo
+                ctx.fillStyle = "#000";
+                ctx.fillRect(this.x + 10, this.y + 10, 20, 5);
+            }
+            update() { this.y += this.speed; }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 6;
+                this.speedY = (Math.random() - 0.5) * 6;
+                this.alpha = 1;
+            }
+            draw() {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.alpha -= 0.02;
             }
         }
 
-        // Função para verificar colisões entre lasers e inimigos
-        function checkCollisions() {
-            lasers.forEach((laser, laserIndex) => {
-                enemies.forEach((enemy, enemyIndex) => {
-                    // Verificar colisão (simples: se o laser atinge a nave)
-                    if (laser.x < enemy.x + 40 &&
-                        laser.x + 5 > enemy.x &&
-                        laser.y < enemy.y + 40 &&
-                        laser.y + 20 > enemy.y) {
+        // --- Lógica Principal ---
 
-                        // Remover laser e inimigo quando há colisão
-                        lasers.splice(laserIndex, 1);
-                        enemies.splice(enemyIndex, 1);
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            score = 0;
+            lives = 3;
+            gameActive = true;
+            enemies = [];
+            lasers = [];
+            particles = [];
+            player = new Player();
+            document.getElementById("gameOver").style.display = "none";
+            updateUI();
+        }
 
-                        // Aumentar a pontuação
+        function spawnExplosion(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function updateUI() {
+            scoreEl.innerText = score;
+            livesEl.innerText = lives;
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+
+            // Limpa com rastro leve
+            ctx.fillStyle = "rgba(10, 10, 10, 0.2)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            player.update();
+            player.draw();
+
+            // Gerenciar Lasers
+            lasers.forEach((l, index) => {
+                l.update();
+                l.draw();
+                if (l.y + l.h < 0) lasers.splice(index, 1);
+            });
+
+            // Gerenciar Inimigos
+            if (Math.random() < 0.03) enemies.push(new Enemy());
+            enemies.forEach((en, eIndex) => {
+                en.update();
+                en.draw();
+
+                // Colisão Inimigo vs Player
+                if (en.x < player.x + player.w && en.x + en.w > player.x && 
+                    en.y < player.y + player.h && en.y + en.h > player.y) {
+                    handleHit(eIndex);
+                }
+
+                // Inimigo passou da tela
+                if (en.y > canvas.height) {
+                    enemies.splice(eIndex, 1);
+                    lives--;
+                    updateUI();
+                }
+
+                // Colisão Inimigo vs Laser
+                lasers.forEach((l, lIndex) => {
+                    if (l.x < en.x + en.w && l.x + l.w > en.x && l.y < en.y + en.h && l.y + l.h > en.y) {
+                        spawnExplosion(en.x + en.w/2, en.y + en.h/2, "#ffcc00");
+                        enemies.splice(eIndex, 1);
+                        lasers.splice(lIndex, 1);
                         score += 10;
-
-                        // Atualizar a exibição da pontuação
-                        document.getElementById("score").textContent = `Pontuação: ${score}`;
+                        updateUI();
                     }
                 });
             });
-        }
 
-        // Função para atualizar o movimento do foguete
-        function updateRocket() {
-            if (moveLeft && rocketX > 0) rocketX -= rocketSpeed;
-            if (moveRight && rocketX < canvas.width - rocketWidth) rocketX += rocketSpeed;
-        }
-
-        // Função para desenhar tudo no canvas
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            if (gameOver) return;
-
-            drawRocket();
-            drawLasers();
-            drawEnemies();
-            updateRocket();
-            spawnEnemies();
-        }
-
-        // Função para verificar colisões com o foguete (game over)
-        function checkGameOver() {
-            // Verifica se algum inimigo colidiu com o foguete
-            enemies.forEach((enemy) => {
-                if (enemy.x < rocketX + rocketWidth &&
-                    enemy.x + 40 > rocketX &&
-                    enemy.y < rocketY + rocketHeight &&
-                    enemy.y + 40 > rocketY) {
-                    gameOver = true;
-                    document.getElementById("gameOver").style.display = "block";
-                }
+            // Gerenciar Partículas
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw();
+                if (p.alpha <= 0) particles.splice(index, 1);
             });
+
+            if (lives <= 0) endGame();
+
+            requestAnimationFrame(gameLoop);
         }
 
-        // Função para atualizar o jogo a cada frame
-        function update() {
-            if (gameOver) return;
-
-            draw();
-            checkCollisions();
-            checkGameOver();
-            requestAnimationFrame(update);
+        function handleHit(index) {
+            spawnExplosion(player.x + player.w/2, player.y + player.h/2, "#00ffcc");
+            enemies.splice(index, 1);
+            lives--;
+            updateUI();
         }
 
-        // Iniciar o jogo
-        update();
+        function endGame() {
+            gameActive = false;
+            document.getElementById("gameOver").style.display = "block";
+            document.getElementById("finalScore").innerText = score;
+        }
+
+        function resetGame() {
+            init();
+            gameLoop();
+        }
+
+        // --- Eventos ---
+        window.addEventListener("keydown", e => {
+            keys[e.key] = true;
+            if (e.key === " " && gameActive) {
+                lasers.push(new Laser(player.x + player.w / 2 - 2, player.y));
+            }
+        });
+        window.addEventListener("keyup", e => keys[e.key] = false);
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        init();
+        gameLoop();
     </script>
 </body>
 </html>
