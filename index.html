@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Jogo de Carro 3D</title>
+    <title>Jogo de Carro 3D Melhorado</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
@@ -14,6 +15,7 @@
         // Cena, câmera e renderizador
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xa0a0a0);
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         camera.position.set(0, 5, 10);
 
@@ -36,55 +38,78 @@
         floor.rotation.x = -Math.PI/2;
         scene.add(floor);
 
-        // Carro (um cubo simples)
-        const carGeometry = new THREE.BoxGeometry(1, 0.5, 2);
-        const carMaterial = new THREE.MeshStandardMaterial({color: 0xff0000});
-        const car = new THREE.Mesh(carGeometry, carMaterial);
-        car.position.y = 0.25;
+        // Carro (cubo + rodas)
+        const car = new THREE.Group();
+
+        // Corpo
+        const bodyGeometry = new THREE.BoxGeometry(1.5, 0.5, 3);
+        const bodyMaterial = new THREE.MeshStandardMaterial({color: 0xff0000});
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 0.5;
+        car.add(body);
+
+        // Rodas
+        const wheelGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16);
+        const wheelMaterial = new THREE.MeshStandardMaterial({color: 0x333333});
+
+        function createWheel(x, z) {
+            const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(x, 0.3, z);
+            car.add(wheel);
+        }
+
+        createWheel(-0.7, -1.2);
+        createWheel(0.7, -1.2);
+        createWheel(-0.7, 1.2);
+        createWheel(0.7, 1.2);
+
+        car.position.y = 0;
         scene.add(car);
 
         // Controle do carro
-        const speed = 0.1;
-        const turnSpeed = 0.05;
+        const speed = 0.2;
+        const turnSpeed = 0.03;
         let moveForward = false;
         let moveBackward = false;
         let turnLeft = false;
         let turnRight = false;
 
         document.addEventListener('keydown', (event) => {
-            if(event.key === 'ArrowUp') moveForward = true;
-            if(event.key === 'ArrowDown') moveBackward = true;
-            if(event.key === 'ArrowLeft') turnLeft = true;
-            if(event.key === 'ArrowRight') turnRight = true;
+            if(event.key === 'ArrowUp' || event.key === 'w') moveForward = true;
+            if(event.key === 'ArrowDown' || event.key === 's') moveBackward = true;
+            if(event.key === 'ArrowLeft' || event.key === 'a') turnLeft = true;
+            if(event.key === 'ArrowRight' || event.key === 'd') turnRight = true;
         });
 
         document.addEventListener('keyup', (event) => {
-            if(event.key === 'ArrowUp') moveForward = false;
-            if(event.key === 'ArrowDown') moveBackward = false;
-            if(event.key === 'ArrowLeft') turnLeft = false;
-            if(event.key === 'ArrowRight') turnRight = false;
+            if(event.key === 'ArrowUp' || event.key === 'w') moveForward = false;
+            if(event.key === 'ArrowDown' || event.key === 's') moveBackward = false;
+            if(event.key === 'ArrowLeft' || event.key === 'a') turnLeft = false;
+            if(event.key === 'ArrowRight' || event.key === 'd') turnRight = false;
         });
 
         // Loop de animação
         function animate() {
             requestAnimationFrame(animate);
 
-            // Movimento do carro
-            if(moveForward) {
-                car.position.x -= Math.sin(car.rotation.y) * speed;
-                car.position.z -= Math.cos(car.rotation.y) * speed;
-            }
-            if(moveBackward) {
-                car.position.x += Math.sin(car.rotation.y) * speed;
-                car.position.z += Math.cos(car.rotation.y) * speed;
-            }
+            // Movimento do carro usando translateZ
+            if(moveForward) car.translateZ(-speed);
+            if(moveBackward) car.translateZ(speed);
             if(turnLeft) car.rotation.y += turnSpeed;
             if(turnRight) car.rotation.y -= turnSpeed;
 
-            // Câmera segue o carro
-            camera.position.x = car.position.x + 5 * Math.sin(car.rotation.y);
-            camera.position.z = car.position.z + 5 * Math.cos(car.rotation.y);
-            camera.position.y = car.position.y + 3;
+            // Câmera segue o carro suavemente
+            const cameraOffset = new THREE.Vector3(0, 3, 7);
+            const desiredPosition = car.position.clone().add(
+                new THREE.Vector3(
+                    cameraOffset.x * Math.sin(car.rotation.y),
+                    cameraOffset.y,
+                    cameraOffset.z * Math.cos(car.rotation.y)
+                )
+            );
+
+            camera.position.lerp(desiredPosition, 0.1);
             camera.lookAt(car.position);
 
             renderer.render(scene, camera);
