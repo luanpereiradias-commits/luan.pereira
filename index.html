@@ -336,7 +336,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Jogo de Carro 3D com Turbo</title>
+    <title>Jogo de Carro 3D com Turbo Visual</title>
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; }
@@ -408,6 +408,25 @@
     car.position.set(0, 0, -20);
     scene.add(car);
 
+    // Turbo visual: cones atrás do carro
+    const turboGroup = new THREE.Group();
+    const coneGeometry = new THREE.ConeGeometry(0.2, 0.8, 8);
+    const coneMaterial = new THREE.MeshStandardMaterial({color: 0xff6600, emissive: 0xff3300});
+    const coneLeft = new THREE.Mesh(coneGeometry, coneMaterial);
+    const coneRight = new THREE.Mesh(coneGeometry, coneMaterial);
+
+    coneLeft.rotation.x = Math.PI;
+    coneRight.rotation.x = Math.PI;
+
+    coneLeft.position.set(-0.5, 0.4, 1.6);
+    coneRight.position.set(0.5, 0.4, 1.6);
+
+    turboGroup.add(coneLeft);
+    turboGroup.add(coneRight);
+    car.add(turboGroup);
+
+    turboGroup.visible = false; // inicialmente invisível
+
     // Controle
     let moveForward = false, moveBackward = false, turnLeft = false, turnRight = false, turbo = false;
     const baseSpeed = 0.2;
@@ -419,7 +438,7 @@
         if(event.key === 'ArrowDown' || event.key === 's') moveBackward = true;
         if(event.key === 'ArrowLeft' || event.key === 'a') turnLeft = true;
         if(event.key === 'ArrowRight' || event.key === 'd') turnRight = true;
-        if(event.key === 'Shift') turbo = true; // turbo ativado
+        if(event.key === 'Shift') turbo = true;
     });
 
     document.addEventListener('keyup', (event) => {
@@ -427,7 +446,7 @@
         if(event.key === 'ArrowDown' || event.key === 's') moveBackward = false;
         if(event.key === 'ArrowLeft' || event.key === 'a') turnLeft = false;
         if(event.key === 'ArrowRight' || event.key === 'd') turnRight = false;
-        if(event.key === 'Shift') turbo = false; // turbo desativado
+        if(event.key === 'Shift') turbo = false;
     });
 
     // Loop de animação
@@ -441,10 +460,11 @@
         if(turnLeft) car.rotation.y += turnSpeed;
         if(turnRight) car.rotation.y -= turnSpeed;
 
-        // Mudança de cor ao turbo
+        // Turbo visual
+        turboGroup.visible = turbo;
         body.material.color.set(turbo ? 0xffff00 : 0xff0000);
 
-        // Câmera
+        // Câmera atrás do carro
         const cameraDistance = 7;
         const cameraHeight = 3;
         const cameraLerpFactor = 0.1;
