@@ -125,3 +125,46 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+    // Dentro da função animate()
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Movimento do carro
+        if(moveForward) car.translateZ(-speed);
+        if(moveBackward) car.translateZ(speed);
+        if(turnLeft) car.rotation.y += turnSpeed;
+        if(turnRight) car.rotation.y -= turnSpeed;
+
+        // Câmera melhorada
+        const cameraDistance = 7; // distância atrás do carro
+        const cameraHeight = 3;   // altura da câmera
+        const cameraLerpFactor = 0.1; // suavidade
+
+        // Calcula posição desejada da câmera atrás do carro
+        const behind = new THREE.Vector3(0, 0, cameraDistance);
+        behind.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation.y); // rotaciona com o carro
+        const desiredCameraPos = car.position.clone().add(new THREE.Vector3(0, cameraHeight, 0)).add(behind);
+
+        // Suaviza movimento da câmera
+        camera.position.lerp(desiredCameraPos, cameraLerpFactor);
+
+        // Ajusta a rotação da câmera suavemente para olhar para o carro
+        const lookAtPos = car.position.clone().add(new THREE.Vector3(0, 1, 0)); // olhar ligeiramente acima
+        camera.lookAt(lookAtPos);
+
+        renderer.render(scene, camera);
+    }
+</script>
